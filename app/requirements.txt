@@ -1,0 +1,8 @@
+dspy-ai
+google-cloud-aiplatform
+fastapi
+uvicorn[standard]
+pydantic
+python-dotenv
+wikipedia
+wikipedia-api

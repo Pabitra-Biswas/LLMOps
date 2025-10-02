@@ -1,0 +1,31 @@
+# Python venv
+venv/
+.env
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.pdb
+*.egg-info/
+*.egg
+
+# Jupyter / notebooks
+.ipynb_checkpoints/
+*.ipynb
+
+# Logs
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Cache
+.cache/
+.mypy_cache/
+.pytest_cache/
+
+# Build / dist
+build/
+dist/
+*.egg-info/

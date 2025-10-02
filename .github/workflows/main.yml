@@ -1,0 +1,35 @@
+name: Build and Push to Google Artifact Registry
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Authenticate with Google Cloud
+        uses: google-github-actions/auth@v1
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }} # Store your service account key in GitHub secrets
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v1
+
+      - name: Configure Docker
+        # Replace with your GCP region
+        run: gcloud auth configure-docker us-central1-docker.pkg.dev --quiet
+
+      - name: Build Docker image
+        # Replace with your GCP region and project ID
+        run: |
+          docker build -t us-central1-docker.pkg.dev/my-bigquery-test-466512/llm-apps/advanced-rag:${{ github.sha }} ./app
+      
+      - name: Push Docker image
+        # Replace with your GCP region and project ID
+        run: |
+          docker push us-central1-docker.pkg.dev/my-bigquery-test-466512/llm-apps/advanced-rag:${{ github.sha }}

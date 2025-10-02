@@ -1,0 +1,33 @@
+version: 2.1
+orbs:
+  gcp-cli: circleci/gcp-cli@2.4.1
+  docker: circleci/docker@2.2.0
+
+jobs:
+  build-and-push-image:
+    executor: docker/docker
+    steps:
+      - checkout
+      - gcp-cli/install
+      - gcp-cli/configure-gcloud:
+          # Store your base64 encoded service key as a CircleCI environment variable
+          gcloud-service-key: GCLOUD_SERVICE_KEY
+      - run:
+          name: Authenticate Docker with GCP Artifact Registry
+          # Replace with your GCP region
+          command: gcloud auth configure-docker us-central1-docker.pkg.dev
+      - docker/build:
+          # Replace with your GCP region and project ID
+          image: us-central1-docker.pkg.dev/your-gcp-project-id/llm-apps/advanced-rag
+          tag: << pipeline.git.revision >>
+          dockerfile: app/Dockerfile
+          path: ./app
+      - docker/push:
+          # Replace with your GCP region and project ID
+          image: us-central1-docker.pkg.dev/your-gcp-project-id/llm-apps/advanced-rag
+          tag: << pipeline.git.revision >>
+
+workflows:
+  build-and-deploy:
+    jobs:
+      - build-and-push-image
