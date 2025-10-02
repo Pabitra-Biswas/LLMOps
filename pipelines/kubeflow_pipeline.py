@@ -6,6 +6,7 @@ import os
 
 # --- Component: Deploy to Vertex AI ---
 # This component takes a Docker image and deploys it as a Vertex AI Endpoint.
+# ...existing code...
 @component(
     base_image="python:3.9",
     packages_to_install=["google-cloud-aiplatform==1.36.1"],
@@ -16,6 +17,9 @@ def deploy_rag_model_to_vertex(
     serving_image_uri: str,
     model_display_name: str,
     endpoint_display_name: str,
+    machine_type: str = "n1-standard-2",  # <-- smaller default
+    min_replica_count: int = 1,
+    max_replica_count: int = 1,
 ):
     """
     Deploys a containerized model to a new Vertex AI Endpoint.
@@ -38,13 +42,14 @@ def deploy_rag_model_to_vertex(
     endpoint = aiplatform.Endpoint.create(display_name=endpoint_display_name)
     endpoint.deploy(
         model=model,
-        machine_type="n1-standard-4",
-        min_replica_count=1,
-        max_replica_count=2,
+        machine_type=machine_type,
+        min_replica_count=min_replica_count,
+        max_replica_count=max_replica_count,
         traffic_split={"0": 100},
         sync=True,
     )
     print(f"Model deployed to endpoint {endpoint.resource_name}.")
+# ...existing code...
 
 # --- Kubeflow Pipeline Definition ---
 @dsl.pipeline(
@@ -71,6 +76,6 @@ def rag_deployment_pipeline(
 if __name__ == "__main__":
     Compiler().compile(
         pipeline_func=rag_deployment_pipeline,
-        package_path="rag_deployment_pipeline.json",
+        package_path="rag_deployment_pipeline1.json",
     )
-    print("Pipeline compiled successfully to rag_deployment_pipeline.json")
+    print("Pipeline compiled successfully to rag_deployment_pipeline1.json")

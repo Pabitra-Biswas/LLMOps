@@ -286,4 +286,68 @@ gcloud container clusters create llmops-cluster --num-nodes=3 --machine-type=n1-
 
 
 
-sha256:e60c1784178f76daf00fcdc6dd183c50194d8f5563ad98ce34f972fe2669b9a8
+Now proceed with your pipeline:
+1. Generate the pipeline JSON:
+bashpython pipelines/kubeflow_pipeline.py
+2. Upload to Vertex AI Pipelines:
+
+Go to the Kubeflow UI you showed earlier
+Select "Upload a new pipeline or component"
+Name: advanced-rag-pipeline
+File: Select rag_deployment_pipeline.json
+Click Upload
+
+3. Create Run:
+When creating the run, use this as your docker_image_uri parameter:
+us-central1-docker.pkg.dev/my-bigquery-test-466512/llm-apps/advanced-rag:latest
+Recommendation: Use the latest tag for easier maintenance, or use the specific SHA if you want to pin to this exact version.
+
+Have you generated the rag_deployment_pipeline.json file yet? If you're getting any errors running the Python script, let me know!RetryClaude does not have the ability to run the code it generates yet.
+
+
+
+
+Of course. Here are the step-by-step instructions to create a new repository for your Vertex AI Pipelines.
+
+A repository in this context is a place within Google's Artifact Registry that stores your compiled pipeline templates (.json or .yaml files).
+
+Steps to Create a Vertex AI Pipeline Repository
+Navigate to Vertex AI Pipelines:
+
+In the Google Cloud Console, go to the navigation menu (☰).
+
+Select Vertex AI.
+
+In the Vertex AI menu, find the "Deploy and use" section and click on Pipelines.
+
+Go to the Templates Tab:
+
+On the Pipelines page, click on the "Your templates" tab. This is where you manage your pipeline definitions.
+
+Start the Upload Process:
+
+Click the + Upload button at the top of the page. This will open a new pane on the right side.
+
+Create the New Repository:
+
+In the "Upload pipeline" pane, look for the "Repository" dropdown menu.
+
+Click on the dropdown menu. At the bottom of the list, you will see an option to Create new repository. Click it.
+
+Configure the Repository:
+
+A "Create repository" dialog box will appear.
+
+Name: Enter a unique name for your repository (e.g., my-project-pipelines-repo).
+
+Format: This will be automatically set to KFP (Kubeflow Pipelines), which is correct.
+
+Location Type: Select Region and then choose the desired region (e.g., us-central1).
+
+Click Create.
+
+Finish:
+
+The system will create the repository in Artifact Registry for you.
+
+You will be returned to the "Upload pipeline" pane, and your newly created repository will now be selected in the dropdown. You can now proceed to upload your pipeline template file.

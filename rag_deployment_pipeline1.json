@@ -1,0 +1,130 @@
+{
+  "components": {
+    "comp-deploy-rag-model-to-vertex": {
+      "executorLabel": "exec-deploy-rag-model-to-vertex",
+      "inputDefinitions": {
+        "parameters": {
+          "endpoint_display_name": {
+            "parameterType": "STRING"
+          },
+          "location": {
+            "parameterType": "STRING"
+          },
+          "machine_type": {
+            "defaultValue": "n1-standard-2",
+            "isOptional": true,
+            "parameterType": "STRING"
+          },
+          "max_replica_count": {
+            "defaultValue": 1.0,
+            "isOptional": true,
+            "parameterType": "NUMBER_INTEGER"
+          },
+          "min_replica_count": {
+            "defaultValue": 1.0,
+            "isOptional": true,
+            "parameterType": "NUMBER_INTEGER"
+          },
+          "model_display_name": {
+            "parameterType": "STRING"
+          },
+          "project": {
+            "parameterType": "STRING"
+          },
+          "serving_image_uri": {
+            "parameterType": "STRING"
+          }
+        }
+      }
+    }
+  },
+  "deploymentSpec": {
+    "executors": {
+      "exec-deploy-rag-model-to-vertex": {
+        "container": {
+          "args": [
+            "--executor_input",
+            "{{$}}",
+            "--function_to_execute",
+            "deploy_rag_model_to_vertex"
+          ],
+          "command": [
+            "sh",
+            "-c",
+            "\nif ! [ -x \"$(command -v pip)\" ]; then\n    python3 -m ensurepip || python3 -m ensurepip --user || apt-get install python3-pip\nfi\n\nPIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet --no-warn-script-location 'google-cloud-aiplatform==1.36.1'  &&  python3 -m pip install --quiet --no-warn-script-location 'kfp==2.14.4' '--no-deps' 'typing-extensions>=3.7.4,<5; python_version<\"3.9\"' && \"$0\" \"$@\"\n",
+            "sh",
+            "-ec",
+            "program_path=$(mktemp -d)\n\nprintf \"%s\" \"$0\" > \"$program_path/ephemeral_component.py\"\n_KFP_RUNTIME=true python3 -m kfp.dsl.executor_main                         --component_module_path                         \"$program_path/ephemeral_component.py\"                         \"$@\"\n",
+            "\nimport kfp\nfrom kfp import dsl\nfrom kfp.dsl import *\nfrom typing import *\n\ndef deploy_rag_model_to_vertex(\n    project: str,\n    location: str,\n    serving_image_uri: str,\n    model_display_name: str,\n    endpoint_display_name: str,\n    machine_type: str = \"n1-standard-2\",  # <-- smaller default\n    min_replica_count: int = 1,\n    max_replica_count: int = 1,\n):\n    \"\"\"\n    Deploys a containerized model to a new Vertex AI Endpoint.\n    \"\"\"\n    from google.cloud import aiplatform\n\n    aiplatform.init(project=project, location=location)\n\n    # Upload the model to Vertex AI Model Registry\n    model = aiplatform.Model.upload(\n        display_name=model_display_name,\n        serving_container_image_uri=serving_image_uri,\n        serving_container_predict_route=\"/predict\",\n        serving_container_health_route=\"/health\",\n        serving_container_ports=[8080],\n    )\n    print(f\"Model {model.resource_name} uploaded.\")\n\n    # Create an endpoint and deploy the model\n    endpoint = aiplatform.Endpoint.create(display_name=endpoint_display_name)\n    endpoint.deploy(\n        model=model,\n        machine_type=machine_type,\n        min_replica_count=min_replica_count,\n        max_replica_count=max_replica_count,\n        traffic_split={\"0\": 100},\n        sync=True,\n    )\n    print(f\"Model deployed to endpoint {endpoint.resource_name}.\")\n\n"
+          ],
+          "image": "python:3.9"
+        }
+      }
+    }
+  },
+  "pipelineInfo": {
+    "description": "A pipeline to deploy the advanced RAG model to Vertex AI.",
+    "name": "llm-advanced-rag-deployment-pipeline"
+  },
+  "root": {
+    "dag": {
+      "tasks": {
+        "deploy-rag-model-to-vertex": {
+          "cachingOptions": {
+            "enableCache": true
+          },
+          "componentRef": {
+            "name": "comp-deploy-rag-model-to-vertex"
+          },
+          "inputs": {
+            "parameters": {
+              "endpoint_display_name": {
+                "componentInputParameter": "endpoint_name"
+              },
+              "location": {
+                "componentInputParameter": "region"
+              },
+              "model_display_name": {
+                "componentInputParameter": "model_name"
+              },
+              "project": {
+                "componentInputParameter": "project_id"
+              },
+              "serving_image_uri": {
+                "componentInputParameter": "docker_image_uri"
+              }
+            }
+          },
+          "taskInfo": {
+            "name": "deploy-rag-model-to-vertex"
+          }
+        }
+      }
+    },
+    "inputDefinitions": {
+      "parameters": {
+        "docker_image_uri": {
+          "parameterType": "STRING"
+        },
+        "endpoint_name": {
+          "defaultValue": "advanced-rag-endpoint",
+          "isOptional": true,
+          "parameterType": "STRING"
+        },
+        "model_name": {
+          "defaultValue": "advanced-rag-agent",
+          "isOptional": true,
+          "parameterType": "STRING"
+        },
+        "project_id": {
+          "parameterType": "STRING"
+        },
+        "region": {
+          "parameterType": "STRING"
+        }
+      }
+    }
+  },
+  "schemaVersion": "2.1.0",
+  "sdkVersion": "kfp-2.14.4"
+}
