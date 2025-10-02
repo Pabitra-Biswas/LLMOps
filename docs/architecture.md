@@ -282,3 +282,8 @@ gcloud artifacts repositories create llm-apps --repository-format=docker --locat
 
 
 gcloud container clusters create llmops-cluster --num-nodes=3 --machine-type=n1-standard-4 --region=us-central1 --enable-ip-alias
+
+
+
+
+sha256:e60c1784178f76daf00fcdc6dd183c50194d8f5563ad98ce34f972fe2669b9a8

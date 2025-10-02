@@ -6,3 +6,4 @@ pydantic
 python-dotenv
 wikipedia
 wikipedia-api
+kfp>=2.0.0
