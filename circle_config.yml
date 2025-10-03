@@ -1,0 +1,25 @@
+version: 2.1
+orbs:
+  python: circleci/python@2.1.1
+
+jobs:
+  run-unit-tests:
+    docker:
+      - image: cimg/python:3.10.5
+    steps:
+      - checkout
+      - python/install-packages:
+          pkg-manager: pip
+          app-dir: ./app
+      - run:
+          name: Run Tests
+          command: python -m pytest tests/
+
+workflows:
+  build-and-test:
+    when:
+      git/branch: main
+    jobs:
+      - run-unit-tests:
+          context:
+            - dl-ai-courses # Replace with your CircleCI context if needed
