@@ -1,42 +1,37 @@
 import pytest
 from unittest.mock import patch, MagicMock
 
-# This fixture will now mock the modern dspy.LM and dspy.Retrieve classes
 @pytest.fixture(autouse=True)
 def mock_dspy_calls():
     """
     Mocks the dspy.LM and dspy.Retrieve classes to prevent any real API
     or network calls during the test session.
+    We REMOVED the patch on dspy.settings.configure as it's problematic
+    and unnecessary.
     """
-    # We patch the specific classes that make external calls in your code.
     with patch('dspy.LM', autospec=True) as mock_lm, \
-         patch('dspy.Retrieve', autospec=True) as mock_retrieve, \
-         patch('dspy.settings.configure', autospec=True) as mock_configure:
+         patch('dspy.Retrieve', autospec=True) as mock_retrieve:
         
-        # Ensure that instantiating these classes returns a mock object
         mock_lm.return_value = MagicMock()
         mock_retrieve.return_value = MagicMock()
         
         yield {
             "mock_lm": mock_lm,
             "mock_retrieve": mock_retrieve,
-            "mock_configure": mock_configure
         }
 
 def test_advanced_rag_initialization():
     """
     Tests that the AdvancedRAG class can be initialized correctly.
     """
-    # We can now import our agent code because the dependencies are mocked
-    from app.dspy_agent import AdvancedRAG, dspy
+    # Import the class to be tested
+    from app.dspy_agent import AdvancedRAG
 
-    # Because dspy.Retrieve is mocked, this will return a MagicMock instance
-    mock_retriever = dspy.Retrieve(k=3)
-
-    # 1. Action: Initialize the agent
+    # 1. Action: Initialize the agent with NO arguments, just like in your app code.
     try:
-        # The __init__ of AdvancedRAG will use the mocked dspy.Retrieve
-        agent = AdvancedRAG(retriever_module=mock_retriever)
+        # The __init__ of AdvancedRAG will now call the mocked dspy.Retrieve
+        # without any issues.
+        agent = AdvancedRAG(hops=2)
     except Exception as e:
         pytest.fail(f"AdvancedRAG initialization failed with an exception: {e}")
 
@@ -45,16 +40,16 @@ def test_advanced_rag_initialization():
     assert agent.retrieve is not None
     assert agent.generate_query is not None
     assert agent.generate_answer is not None
+    assert agent.hops == 2
 
 def test_load_rag_agent_runs():
     """
     Tests that the main loading function can be called without crashing.
     """
-    # This import will now succeed
     from app.dspy_agent import load_rag_agent
     from dspy.teleprompt import BootstrapFewShot
 
-    # We need to control what the mocked compiler does. We patch its 'compile' method.
+    # We patch the 'compile' method to prevent it from running and to control its output
     with patch.object(BootstrapFewShot, 'compile', return_value="compiled_agent") as mock_compile:
         
         # 1. Action: Call the function
