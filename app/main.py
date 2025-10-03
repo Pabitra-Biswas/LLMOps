@@ -1,50 +1,50 @@
-from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
+# app/main.py (Corrected for Vertex AI Compatibility)
 
-# This import now points to the file with the modern dspy v3.x code
+from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel # Corrected from pydantic
+from typing import List, Any
+
+# Import your DSPy agent logic
 from dspy_agent import load_rag_agent
 
 app = FastAPI(
-    title="Advanced RAG API with DSPy v3",
-    description="An API serving a compiled RAG agent built with the latest DSPy.",
-    version="1.0.0"
+    title="Vertex AI Compatible RAG Model",
+    version="2.0.0"
 )
 
 # --- Load Agent on Startup ---
-# The agent is created and compiled when the server starts.
-# This ensures the optimized agent is ready to serve requests.
-try:
-    rag_agent = load_rag_agent()
-except Exception as e:
-    rag_agent = None
-    print(f"FATAL: Error loading/compiling DSPy agent on startup: {e}")
-    # In a real app, you might want the server to fail to start if the agent doesn't load.
+rag_agent = load_rag_agent()
 
-class QueryRequest(BaseModel):
+# --- Pydantic Models for Vertex AI Compatibility ---
+
+class PredictionInstance(BaseModel):
     question: str
 
-class QueryResponse(BaseModel):
-    answer: str
+class VertexRequest(BaseModel):
+    instances: List[PredictionInstance]
 
-@app.on_event("startup")
-async def startup_event():
-    if not rag_agent:
-        raise RuntimeError("DSPy agent could not be loaded. Check server logs for errors.")
+class VertexResponse(BaseModel):
+    predictions: List[Any]
 
-@app.get("/health")
-def read_health():
-    """Health check endpoint."""
+# --- API Endpoints ---
+
+# Health check endpoint is required by Vertex AI for deployment
+@app.get("/health", status_code=200)
+def health_check():
     return {"status": "ok"}
 
-@app.post("/predict", response_model=QueryResponse)
-async def predict(request: QueryRequest):
-    """
-    Receives a question and returns the answer from the compiled RAG agent.
-    """
+# Prediction endpoint now uses the Vertex AI schema
+@app.post("/predict", response_model=VertexResponse)
+async def predict(request: VertexRequest):
+    predictions = []
     try:
-        prediction = rag_agent(question=request.question)
-        return QueryResponse(answer=prediction.answer)
+        for instance in request.instances:
+            agent_prediction = rag_agent(question=instance.question)
+            # The prediction for each instance can be a simple dict
+            predictions.append({"answer": agent_prediction.answer})
+        
+        # The final response must be wrapped in a 'predictions' key
+        return VertexResponse(predictions=predictions)
     except Exception as e:
-        # Log the full error for debugging
         print(f"Error during prediction: {e}")
         raise HTTPException(status_code=500, detail="An error occurred during prediction.")
