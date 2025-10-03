@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CogniCore RAG Engine</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #6a11cb;
+            --secondary-color: #2575fc;
+            --background-color: #f0f2f5;
+            --card-background: #ffffff;
+            --text-color: #333;
+            --subtle-text-color: #777;
+            --shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            --border-radius: 12px;
+        }
+
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: var(--background-color);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 700px;
+            background: var(--card-background);
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+            overflow: hidden;
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .header {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            padding: 30px 40px;
+            text-align: center;
+        }
+
+        .header h1 {
+            margin: 0;
+            font-weight: 500;
+            font-size: 28px;
+        }
+
+        .header p {
+            margin: 5px 0 0;
+            opacity: 0.8;
+            font-weight: 300;
+        }
+
+        .main-content {
+            padding: 40px;
+        }
+
+        #question-form {
+            display: flex;
+            flex-direction: column;
+        }
+
+        textarea {
+            width: 100%;
+            padding: 15px;
+            font-size: 16px;
+            font-family: 'Roboto', sans-serif;
+            border-radius: 8px;
+            border: 1px solid #e0e0e0;
+            resize: vertical;
+            min-height: 80px;
+            transition: border-color 0.3s, box-shadow 0.3s;
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: var(--secondary-color);
+            box-shadow: 0 0 0 3px rgba(37, 117, 252, 0.2);
+        }
+
+        button {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            padding: 14px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 500;
+            margin-top: 20px;
+            transition: transform 0.2s, box-shadow 0.3s;
+            align-self: flex-end;
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 25px rgba(0, 0, 0, 0.12);
+        }
+        
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        #response-container {
+            margin-top: 30px;
+        }
+        
+        #response-container h2 {
+            font-weight: 500;
+            color: var(--text-color);
+            border-bottom: 1px solid #eee;
+            padding-bottom: 10px;
+        }
+
+        #response-div {
+            margin-top: 20px;
+            padding: 20px;
+            background-color: #f9f9f9;
+            border-left: 4px solid var(--primary-color);
+            border-radius: 0 8px 8px 0;
+            white-space: pre-wrap;
+            color: var(--subtle-text-color);
+            line-height: 1.6;
+            min-height: 50px;
+            transition: background-color 0.3s;
+        }
+
+        .loader {
+            text-align: center;
+            padding: 20px;
+        }
+
+        .loader::after {
+            content: '';
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(106, 17, 203, 0.2);
+            border-radius: 50%;
+            border-top-color: var(--primary-color);
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <header class="header">
+            <h1>CogniCore RAG Engine</h1>
+            <p>Your Intelligent Document Q&A Assistant</p>
+        </header>
+        <main class="main-content">
+            <form id="question-form">
+                <textarea id="question-input" rows="4" placeholder="Ask anything about our knowledge base..." required></textarea>
+                <button type="submit" id="submit-btn">Submit Question</button>
+            </form>
+            <section id="response-container">
+                <h2>Answer</h2>
+                <div id="response-div">Your answer will appear here...</div>
+            </section>
+        </main>
+    </div>
+
+    <script>
+        const form = document.getElementById('question-form');
+        const input = document.getElementById('question-input');
+        const responseDiv = document.getElementById('response-div');
+        const submitBtn = document.getElementById('submit-btn');
+
+        form.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const question = input.value;
+
+            // Disable button and show loader
+            submitBtn.disabled = true;
+            responseDiv.innerHTML = '<div class="loader"></div>';
+            responseDiv.style.color = 'var(--subtle-text-color)';
+
+            try {
+                const response = await fetch('/ask', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ question: question })
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.detail || `HTTP error! status: ${response.status}`);
+                }
+
+                const data = await response.json();
+                responseDiv.textContent = data.answer;
+                responseDiv.style.color = 'var(--text-color)'; // Change text color for the answer
+
+            } catch (error) {
+                responseDiv.textContent = 'An error occurred: ' + error.message;
+                responseDiv.style.color = '#e74c3c'; // Error color
+            } finally {
+                // Re-enable button
+                submitBtn.disabled = false;
+            }
+        });
+    </script>
+
+</body>
+</html>

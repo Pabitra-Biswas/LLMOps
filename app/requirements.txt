@@ -7,3 +7,10 @@ python-dotenv
 wikipedia
 wikipedia-api
 kfp>=2.0.0
+dspy-ai
+google-cloud-aiplatform
+fastapi
+uvicorn[standard]
+pydantic
+python-dotenv
+pytest

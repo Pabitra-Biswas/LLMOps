@@ -351,3 +351,219 @@ Finish:
 The system will create the repository in Artifact Registry for you.
 
 You will be returned to the "Upload pipeline" pane, and your newly created repository will now be selected in the dropdown. You can now proceed to upload your pipeline template file.
+
+
+
+
+storage.objects.get
+storage.objects.create
+
+
+
+
+
+### Solution: How to Deploy with Apache Airflow
+
+Here is a complete, step-by-step guide to replacing your Kubeflow pipeline with an Airflow DAG (Directed Acyclic Graph).
+
+#### Step 1: Prerequisites
+
+1.  **Running Airflow Instance:** You need an Airflow environment. Based on your `docker ps` output, it looks like you already have one running locally with Docker Compose.
+2.  **Install Google Provider:** Make sure your Airflow environment has the necessary Google provider package installed. You would typically add this to the `requirements.txt` file for your Airflow Docker image and rebuild it.
+    ```
+    apache-airflow-providers-google
+    ```
+3.  **Set Up GCP Connection:** In the Airflow UI, you need to create a connection to your Google Cloud project.
+    *   Go to **Admin -> Connections**.
+    *   Click **"Add a new record"**.
+    *   Set the **Connection type** to **"Google Cloud"**.
+    *   Give it a **Connection Id**, for example, `google_cloud_default`.
+    *   Provide your authentication details. The easiest way is to paste the entire contents of your `gcp-key.json` service account file into the **"Keyfile JSON"** field.
+    *   Save the connection.
+
+#### Step 2: Create the Airflow DAG File
+
+Instead of `kubeflow_pipeline.py`, you will create a new DAG file (e.g., `deploy_rag_model_dag.py`) and place it in your Airflow project's `dags` folder.
+
+Here is the code for that file:
+
+```python
+# In your Airflow project's dags/ folder
+# File: deploy_rag_model_dag.py
+
+from __future__ import annotations
+
+import pendulum
+
+from airflow.models.dag import DAG
+from airflow.operators.python import PythonOperator
+
+# The GCP connection ID you created in the Airflow UI
+GCP_CONN_ID = "google_cloud_default"
+# Your GCP Project ID
+GCP_PROJECT_ID = "my-bigquery-test-466512"
+# The region where you want to deploy the model
+GCP_REGION = "us-central1" # Or "us-east1", etc.
+
+def deploy_model_to_vertex_ai(project_id: str, region: str, **context):
+    """
+    A Python function that uses the Vertex AI SDK to deploy a model.
+    This is the core logic of our deployment task.
+    """
+    from google.cloud import aiplatform
+
+    # Retrieve the Docker image URI passed from the trigger command
+    docker_image_uri = context["dag_run"].conf.get("docker_image_uri")
+    if not docker_image_uri:
+        raise ValueError("'docker_image_uri' must be provided in the DAG run configuration.")
+
+    print(f"Starting deployment for image: {docker_image_uri}")
+
+    # 1. Initialize the Vertex AI client
+    aiplatform.init(project=project_id, location=region)
+
+    model_display_name = "advanced-rag-agent-airflow"
+    endpoint_display_name = f"{model_display_name}-endpoint"
+
+    # 2. Upload the model to Vertex AI Model Registry
+    print(f"Uploading model '{model_display_name}'...")
+    model = aiplatform.Model.upload(
+        display_name=model_display_name,
+        serving_container_image_uri=docker_image_uri,
+        serving_container_predict_route="/predict",
+        serving_container_health_route="/health",
+        serving_container_ports=[8080],
+    )
+    print(f"Model uploaded successfully: {model.resource_name}")
+
+    # 3. Create a new endpoint
+    print(f"Creating endpoint '{endpoint_display_name}'...")
+    endpoint = aiplatform.Endpoint.create(display_name=endpoint_display_name)
+    print(f"Endpoint created successfully: {endpoint.resource_name}")
+
+    # 4. Deploy the model to the endpoint
+    print("Deploying model to endpoint...")
+    endpoint.deploy(
+        model=model,
+        machine_type="n1-standard-4", # You can choose your machine type here
+        min_replica_count=1,
+        max_replica_count=1,
+        traffic_split={"0": 100},
+        sync=True, # Waits for the deployment to complete
+    )
+    print("Model deployed successfully!")
+
+
+with DAG(
+    dag_id="vertex_ai_rag_model_deployment",
+    start_date=pendulum.datetime(2025, 1, 1, tz="UTC"),
+    catchup=False,
+    schedule=None, # This DAG is meant to be triggered manually
+    tags=["mlops", "rag", "vertex-ai"],
+) as dag:
+    deploy_task = PythonOperator(
+        task_id="deploy_rag_model_to_vertex",
+        python_callable=deploy_model_to_vertex_ai,
+        op_kwargs={"project_id": GCP_PROJECT_ID, "region": GCP_REGION},
+        # Ensure this task uses the GCP connection you configured
+        gcp_conn_id=GCP_CONN_ID,
+    )
+
+```
+
+#### Step 3: Trigger the DAG Manually
+
+1.  **Push your Docker Image:** Your GitHub Actions pipeline will build your Docker image and push it to Artifact Registry. Copy the full URI of the image (e.g., `us-central1-docker.pkg.dev/.../advanced-rag:c1a2b3d4...`).
+2.  **Go to the Airflow UI:** Open your Airflow webserver (e.g., `http://localhost:8080`).
+3.  **Find and Unpause the DAG:** Find the DAG named `vertex_ai_rag_model_deployment` and un-pause it.
+4.  **Trigger the DAG:** Click the "Play" button (▶️) on the right side of the DAG's row.
+5.  **Provide the Docker URI:** A menu will pop up. Select **"Trigger DAG w/ config"**. In the JSON box that appears, you must provide the Docker image URI like this:
+    ```json
+    {
+      "docker_image_uri": "us-central1-docker.pkg.dev/my-bigquery-test-466512/llm-apps/advanced-rag:c1a2b3d4e5f6"
+    }
+    ```
+6.  **Click Trigger:** The DAG run will start. You can click on its name to see the progress and view the logs for the `deploy_rag_model_to_vertex` task in real-time.
+
+This Airflow DAG achieves the exact same outcome as your Kubeflow pipeline but in a way that is far less likely to hit your specific quota limit.
+
+
+
+### **Step 2: Re-build and Re-push Your RAG Model Image**
+
+Now that you've fixed the core application, you need to publish a new version of it.
+
+1.  **Open your terminal** in the `llmops-advanced-rag` root directory.
+2.  **Get the new Git commit hash** to use as a unique version tag.
+    ```bash
+    git rev-parse --short HEAD
+    ```
+    (Let's say the output is `e4f5g6h`)
+3.  **Build the RAG model image** (this is different from the proxy image).
+    ```bash
+    docker build -t us-central1-docker.pkg.dev/my-bigquery-test-466512/llm-apps/advanced-rag:e140edb -f app/Dockerfile .
+    ```
+4.  **Push the new RAG model image:**
+    ```bash
+    docker push us-central1-docker.pkg.dev/my-bigquery-test-466512/llm-apps/advanced-rag:e140edb
+    ```
+
+### **Step 3: Re-deploy the Endpoint with Airflow**
+
+Finally, tell Vertex AI to use this new, corrected version of your model.
+
+1.  **Go to your Airflow UI** (`http://localhost:8080`).
+2.  **Trigger the `vertex_ai_rag_model_deployment` DAG again.**
+3.  **CRITICAL:** In the configuration JSON, use the **new image URI with the new tag**.
+    ```json
+    {
+      "docker_image_uri": "us-central1-docker.pkg.dev/my-bigquery-test-466512/llm-apps/advanced-rag:e140edb"
+    }
+    ```
+4.  **Wait for the Airflow DAG to finish.** This will take time, as it has to create a new model version and deploy it to the endpoint. It will perform a "blue-green" deployment, safely replacing the old broken version with the new working one without any downtime.
+
+### **Final Step: Test the Webpage Again**
+
+Once the Airflow DAG has successfully finished, go back to your public Cloud Run URL. **You do not need to redeploy the proxy again.** The proxy is already correct.
+
+Now, when you ask a question on the webpage, the entire chain will work:
+*   **Frontend** sends `{"question": ...}` to the Proxy.
+*   **Proxy** receives it and calls Vertex AI with `{"instances": [{"question": ...}]}`.
+*   **Vertex AI Endpoint** receives this, and your **newly deployed RAG model** now understands this format, processes the question, and returns the answer correctly.
+*   The **Proxy** gets the answer and sends it back to the **Frontend**.
+*   The **Frontend** displays the correct answer.
+
+
+
+
+
+astro dev run dags trigger vertex_ai_rag_model_deployment --conf "{\"docker_image_uri\": \"us-central1-docker.pkg.dev/my-bigquery-test-466512/llm-apps/advanced-rag:db5ac46\"}"
+
+
+
+
+
+
+
+
+
+#### Step 2: Re-build, Re-push, and Re-deploy
+
+You need to repeat the deployment process one last time with this fix.
+
+1.  **Build a new image version (v3):**
+    ```bash
+    docker build -t us-central1-docker.pkg.dev/my-bigquery-test-466512/llm-apps/rag-web-proxy:v3 -f web-proxy/Dockerfile .
+    ```
+
+2.  **Push the new image:**
+    ```bash
+    docker push us-central1-docker.pkg.dev/my-bigquery-test-466512/llm-apps/rag-web-proxy:v3
+    ```
+
+3.  **Deploy the new image:** Run the single-line command.
+    ```shell
+    gcloud run deploy rag-web-proxy --image="us-central1-docker.pkg.dev/my-bigquery-test-466512/llm-apps/rag-web-proxy:v3" --platform="managed" --region="us-central1" --allow-unauthenticated --service-account="rag-web-proxy-sa@my-bigquery-test-466512.iam.gserviceaccount.com"
+    ```
+
+This time, the container will start, Uvicorn will listen on the correct port `8080`, the health check will pass, and your service will become available. This should be the final fix.

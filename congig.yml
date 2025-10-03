@@ -9,7 +9,7 @@ jobs:
     # Specify the execution environment. We'll use a standard Python 3.10 image.
     docker:
         - image: cimg/python:3.10.5
-    
+
     # Define the steps to be executed in this job.
     steps:
         # Step 1: Get the code from your repository.
@@ -20,7 +20,7 @@ jobs:
             pkg-manager: pip
             # Tell the orb that our requirements file is inside the 'app/' directory.
             app-dir: ./app
-    
+
         # Step 3: Run the tests using pytest.
         - run:
             name: Run Tests
@@ -33,7 +33,7 @@ workflows:
     # This workflow will only run when you push changes to the 'main' branch.
     when:
         git/branch: main
-    
+
     # The list of jobs to run in this workflow.
     jobs:
         - run-unit-tests:

@@ -1,0 +1,36 @@
+# # Core LangChain packages for Gemini
+# langchain>=0.2.0
+# langchain-core>=0.2.0
+# langchain-google-genai>=1.0.0
+
+# Testing
+pytest==7.4.3
+ipytest==0.13.3
+
+# Jupyter/IPython (if needed for development)
+ipython==8.16.1
+ipykernel==6.25.2
+jupyter_client==8.4.0
+jupyter_core==5.4.0
+
+# Other dependencies
+python-dotenv==1.0.0
+requests==2.31.0
+PyYAML==6.0.1
+pydantic>=2.7.4
+numpy>=1.26.4
+
+# Supporting libraries
+aiohttp==3.8.6
+tenacity==8.2.3
+SQLAlchemy==2.0.22
+
+
+
+dspy-ai
+google-cloud-aiplatform
+fastapi
+uvicorn[standard]
+pydantic
+python-dotenv
+pytest
