@@ -1,0 +1,15 @@
+artifact_uri: mlflow-artifacts:/818971639900887212/aa27e3e24bfb4a5da62877f25ee7a330/artifacts
+end_time: 1759555237808
+entry_point_name: ''
+experiment_id: '818971639900887212'
+lifecycle_stage: active
+run_id: aa27e3e24bfb4a5da62877f25ee7a330
+run_name: lyrical-owl-838
+run_uuid: aa27e3e24bfb4a5da62877f25ee7a330
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1759555206542
+status: 3
+tags: []
+user_id: ppabi

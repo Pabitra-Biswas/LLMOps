@@ -1,0 +1,17 @@
+artifact_path: compiled_rag_agent
+flavors:
+  dspy:
+    code: null
+    model_path: data\model.pkl
+  python_function:
+    env:
+      conda: conda.yaml
+      virtualenv: python_env.yaml
+    loader_module: mlflow.dspy
+    python_version: 3.11.3
+mlflow_version: 2.21.3
+model_size_bytes: 26972
+model_uuid: 548622fe57bc4fe5a777f90fb860b40e
+prompts: null
+run_id: 1bbb2fd2824548a9a79e1d23ec32b8a3
+utc_time_created: '2025-10-04 05:24:43.225632'

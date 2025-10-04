@@ -1,0 +1,15 @@
+artifact_uri: mlflow-artifacts:/818971639900887212/1bbb2fd2824548a9a79e1d23ec32b8a3/artifacts
+end_time: 1759555492977
+entry_point_name: ''
+experiment_id: '818971639900887212'
+lifecycle_stage: active
+run_id: 1bbb2fd2824548a9a79e1d23ec32b8a3
+run_name: colorful-wren-166
+run_uuid: 1bbb2fd2824548a9a79e1d23ec32b8a3
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1759555475489
+status: 3
+tags: []
+user_id: ppabi
