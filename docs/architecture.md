@@ -573,6 +573,7 @@ This time, the container will start, Uvicorn will listen on the correct port `80
 Of course! Congratulations again on building this incredible end-to-end project. Here is a professional, detailed, and CV-ready description of your project. You can adapt this for your resume, LinkedIn, or portfolio.
 
 ---
+modiffication
 
 ### **Project Title: End-to-End LLMOps System for an Advanced RAG-Based Q&A Application on GCP**
 
